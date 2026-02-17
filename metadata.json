@@ -1,0 +1,7 @@
+{
+  "name": "CheckMaster Pro",
+  "description": "Daily operational checklist system for businesses with opening/closing routines, photo verification, and manager dashboard.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
