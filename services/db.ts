@@ -1,7 +1,8 @@
-import { Sector, ChecklistRecord } from '../types';
+import { Sector, ChecklistRecord, Task } from '../types';
 import { supabase } from './supabase';
 
 export const DB = {
+  // --- SETORES ---
   getSectors: async (): Promise<Sector[]> => {
     try {
       const { data, error } = await supabase
@@ -32,6 +33,43 @@ export const DB = {
     return await supabase.from('setores').delete().eq('id', id);
   },
 
+  // --- TAREFAS ---
+  getTasks: async (sectorId?: string): Promise<Task[]> => {
+    try {
+      let query = supabase.from('tarefas').select('*').order('tipo');
+      if (sectorId) query = query.eq('setor_id', sectorId);
+      
+      const { data, error } = await query;
+      if (error) throw error;
+
+      return (data || []).map(t => ({
+        id: t.id.toString(),
+        sectorId: t.setor_id.toString(),
+        type: t.tipo as any,
+        description: t.descricao
+      }));
+    } catch (err) {
+      console.error('Erro ao buscar tarefas:', err);
+      return [];
+    }
+  },
+
+  saveTask: async (task: Omit<Task, 'id'>) => {
+    return await supabase
+      .from('tarefas')
+      .insert([{ 
+        setor_id: parseInt(task.sectorId), 
+        tipo: task.type, 
+        descricao: task.description 
+      }])
+      .select();
+  },
+
+  deleteTask: async (id: string) => {
+    return await supabase.from('tarefas').delete().eq('id', id);
+  },
+
+  // --- REGISTROS ---
   getRecords: async (): Promise<ChecklistRecord[]> => {
     try {
       const { data, error } = await supabase
@@ -48,7 +86,7 @@ export const DB = {
         type: r.tipo as any,
         date: r.data,
         timestamp: new Date(r.created_at || Date.now()).getTime(),
-        completedTasks: [],
+        completedTasks: r.tarefas_concluidas || [],
         taskPhotos: {},
         notes: r.notas || '',
         problemReport: r.problemas || '',
@@ -69,10 +107,20 @@ export const DB = {
     data: string;
     notas?: string;
     problemas?: string;
+    tarefas_concluidas?: string[];
   }) => {
     return await supabase
       .from('registros_fotos')
-      .insert([recordData])
+      .insert([{
+        setor_id: recordData.setor_id,
+        funcionario: recordData.funcionario,
+        tipo: recordData.tipo,
+        url_foto: recordData.url_foto,
+        data: recordData.data,
+        notas: recordData.notas,
+        problemas: recordData.problemas,
+        tarefas_concluidas: recordData.tarefas_concluidas || []
+      }])
       .select();
   },
 
